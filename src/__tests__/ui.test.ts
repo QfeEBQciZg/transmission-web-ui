@@ -102,4 +102,10 @@ describe('ui store config export/import/reset', () => {
     ui.restoreKnownDirs()
     expect(ui.hiddenDownloadDirs).toEqual([])
   })
+
+  it('prevents hiding the name column', () => {
+    const ui = useUiStore()
+    ui.setColumnHidden('name', true)
+    expect(ui.columns.hidden).not.toContain('name')
+  })
 })

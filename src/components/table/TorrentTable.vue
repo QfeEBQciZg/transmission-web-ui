@@ -440,6 +440,7 @@ const colMenuItems = computed<ContextMenuItem[]>(() =>
     key: c.key,
     label: c.label,
     checked: !ui.columns.hidden.includes(c.key),
+    disabled: c.key === 'name',
     keepOpen: true,
   })),
 )
@@ -449,6 +450,7 @@ function onRowMenuSelect(key: string): void {
 }
 
 function onColMenuSelect(key: string): void {
+  if (key === 'name') return
   ui.setColumnHidden(key, !ui.columns.hidden.includes(key))
 }
 </script>

@@ -142,6 +142,7 @@ export const useUiStore = defineStore('ui', {
     },
 
     setColumnHidden(key: string, hidden: boolean): void {
+      if (key === 'name' && hidden) return
       const set = new Set(this.columns.hidden)
       if (hidden) set.add(key)
       else set.delete(key)
