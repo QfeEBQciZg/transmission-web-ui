@@ -73,7 +73,12 @@ async function submit(): Promise<void> {
   submitting.value = true
   const targetDir = dir.value.trim()
   try {
-    await torrents.changeLocation(ids.value, targetDir, move.value, verifyAfter.value)
+    await torrents.changeLocation(
+      ids.value,
+      targetDir,
+      move.value,
+      move.value && verifyAfter.value,
+    )
     ui.unhideDownloadDir(targetDir)
     torrents.clearSelection()
     visible.value = false
