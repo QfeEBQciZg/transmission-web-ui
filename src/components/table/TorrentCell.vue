@@ -43,17 +43,11 @@ const progressState = computed(() => {
   }
 })
 
-const nameTooltip = computed(() =>
-  props.row.isError && props.row.error_string
-    ? `${props.row.name}\n${props.row.error_string}`
-    : props.row.name,
-)
-
 const statusText = computed(() => t(`status.${statusKey(props.row.status)}`))
 </script>
 
 <template>
-  <div v-if="colKey === 'name'" class="cell-name" :title="nameTooltip">
+  <div v-if="colKey === 'name'" class="cell-name">
     <StatusIcon :row="row" />
     <span class="name-text">{{ row.name }}</span>
   </div>
