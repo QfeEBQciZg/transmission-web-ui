@@ -44,7 +44,7 @@ async function submit(): Promise<void> {
   <el-dialog v-model="visible" :title="t('dialog.remove.title')" width="480px">
     <p class="confirm-text">{{ t('dialog.remove.confirm', { count: ids.length }) }}</p>
     <div class="name-list">
-      <div v-for="n in names" :key="n" class="name">{{ n }}</div>
+      <div v-for="(n, i) in names" :key="ids[i] ?? i" class="name">{{ n }}</div>
     </div>
     <el-checkbox v-model="deleteData">{{ t('dialog.remove.deleteData') }}</el-checkbox>
     <template #footer>
