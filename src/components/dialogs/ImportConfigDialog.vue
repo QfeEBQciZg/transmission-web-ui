@@ -20,11 +20,13 @@ function open(): void {
 defineExpose({ open })
 
 function onFilePicked(e: Event): void {
-  const file = (e.target as HTMLInputElement).files?.[0]
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
     text.value = String(reader.result ?? '')
+    input.value = ''
   }
   reader.readAsText(file)
 }
