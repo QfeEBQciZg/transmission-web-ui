@@ -63,8 +63,9 @@ describe('formatTimestamp', () => {
 })
 
 describe('formatRatio', () => {
-  it('renders -1 as ∞ and otherwise two decimals', () => {
-    expect(formatRatio(-1)).toBe('∞')
+  it('renders -1 as - and -2 as ∞ and otherwise two decimals', () => {
+    expect(formatRatio(-1)).toBe('-')
+    expect(formatRatio(-2)).toBe('∞')
     expect(formatRatio(1.234)).toBe('1.23')
   })
 })

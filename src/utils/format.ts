@@ -56,8 +56,9 @@ export function formatTimestamp(unixSec: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-/** Format an upload ratio; -1 (no activity) → "∞". */
+/** Format an upload ratio; -1 (no activity) → "-", -2 (infinite) → "∞". */
 export function formatRatio(ratio: number): string {
+  if (ratio === -1) return '-'
   if (ratio < 0) return '∞'
   return ratio.toFixed(2)
 }
