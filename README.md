@@ -8,8 +8,8 @@ A modern web UI for **Transmission 4.1+**, designed as a replacement for the def
 
 ## Requirements
 
-- **Transmission ≥ 4.1** (`rpc_version_semver ≥ 6.0.0`). The version is checked on startup; older daemons trigger a banner warning. **Older Transmission versions (incl. 4.0.x) and the classic RPC protocol are not supported.**
-- A modern desktop browser (desktop only).
+- **Transmission ≥ 4.1** (`rpc_version_semver ≥ 6.0.0`). **Older Transmission versions (incl. 4.0.x) and the classic RPC protocol are not supported.**
+- A modern desktop browser (mobile layout is not currently supported).
 
 ## Installation
 
@@ -23,6 +23,9 @@ curl -fsSL https://raw.githubusercontent.com/QfeEBQciZg/transmission-web-ui/main
 
 # Or specify target directory / custom options
 curl -fsSL https://raw.githubusercontent.com/QfeEBQciZg/transmission-web-ui/main/scripts/install.sh | bash -s -- /usr/share/transmission/public_html
+
+# Restore the stock UI
+curl -fsSL https://raw.githubusercontent.com/QfeEBQciZg/transmission-web-ui/main/scripts/install.sh | bash -s -- --restore
 ```
 
 ### Build from Source
@@ -33,7 +36,7 @@ You can also clone the repository and build locally:
 npm install
 npm run build
 scripts/install.sh                     # auto-detect web dir, installs local dist/
-scripts/install.sh /path/to/webdir     # or set TRANSMISSION_WEB_HOME
+scripts/install.sh /path/to/webdir     # specify web dir (or configure TRANSMISSION_WEB_HOME)
 scripts/install.sh --dist /path/to/dist   # install a build from any directory
 scripts/install.sh --restore           # restore the stock UI
 ```
@@ -45,4 +48,3 @@ This project is written and maintained with the assistance of AI, under human di
 ## License
 
 [MIT](LICENSE)
-
