@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="transmission-logo-gradient" x1="10.5" y1="7" x2="21.5" y2="25" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#67b4f8"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="#204066"/>
+  <path d="M5.5 19.5 L10.5 25 L10.5 7" fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="10.5" y1="7" x2="21.5" y2="25" stroke="url(#transmission-logo-gradient)" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M21.5 25 L21.5 7 L26.5 12.5" fill="none" stroke="#67b4f8" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

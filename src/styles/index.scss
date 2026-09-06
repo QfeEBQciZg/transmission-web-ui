@@ -1,0 +1,36 @@
+// Single light theme (qBittorrent-flavored), organized around CSS variables.
+// Later milestones build the full layout on these tokens.
+
+:root {
+  --twui-header-bg: #3d6b9c;
+  --twui-header-fg: #ffffff;
+  --twui-toolbar-bg: #f0f0f0;
+  --twui-sidebar-bg: #fafafa;
+  --twui-bg: #ffffff;
+  --twui-border: #dcdfe6;
+  --twui-text: #303133;
+  --twui-text-secondary: #909399;
+  --twui-progress: #67c23a;
+  --twui-error: #f56c6c;
+  --twui-warning: #e6a23c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family:
+    -apple-system, 'Segoe UI', 'Helvetica Neue', Arial, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+  color: var(--twui-text);
+  background: var(--twui-bg);
+}
