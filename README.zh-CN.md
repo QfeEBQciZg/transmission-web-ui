@@ -31,3 +31,8 @@ scripts/install.sh --restore           # 恢复官方界面
 ## 开发与维护说明
 
 本项目使用 AI 辅助编写与维护，全程由人工进行设计指导与代码审查。
+
+## 许可证
+
+[MIT](LICENSE)
+

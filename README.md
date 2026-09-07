@@ -31,3 +31,8 @@ scripts/install.sh --restore           # put the stock UI back
 ## Development & Maintenance
 
 This project is written and maintained with the assistance of AI, under human direction and code review.
+
+## License
+
+[MIT](LICENSE)
+

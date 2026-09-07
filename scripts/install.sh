@@ -234,7 +234,7 @@ do_install() {
       log "Preserving stock UI as index.original.html"
       mv "$TARGET_DIR/index.html" "$TARGET_DIR/index.original.html"
     fi
-    if [ -f "$TARGET_DIR/favicon.ico" ] && [ ! -f "$TARGET_DIR/favicon.original.ico" ]; then
+    if [ -f "$src/favicon.ico" ] && [ -f "$TARGET_DIR/favicon.ico" ] && [ ! -f "$TARGET_DIR/favicon.original.ico" ]; then
       mv "$TARGET_DIR/favicon.ico" "$TARGET_DIR/favicon.original.ico"
     fi
   fi
