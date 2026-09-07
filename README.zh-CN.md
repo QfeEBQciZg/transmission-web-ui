@@ -13,20 +13,36 @@
 
 ## 安装
 
-`scripts/install.sh` 可将构建好的 UI 安装到 Transmission 4.1+ 的 web 目录：
+### 快速安装（预构建 Release）
+
+一行命令直接下载并安装最新 Release 产物：
+
+```bash
+# 自动检测 web 目录并安装最新版本
+curl -fsSL https://raw.githubusercontent.com/QfeEBQciZg/transmission-web-ui/main/scripts/install.sh | bash
+
+# 或显式指定目标目录 / 其它参数
+curl -fsSL https://raw.githubusercontent.com/QfeEBQciZg/transmission-web-ui/main/scripts/install.sh | bash -s -- /usr/share/transmission/public_html
+```
+
+### 源码构建安装
+
+也可克隆源码后本地构建安装：
 
 ```bash
 npm install
 npm run build
-scripts/install.sh                     # 自动检测 web 目录，低于 4.1 拒绝安装
+scripts/install.sh                     # 自动检测 web 目录，优先安装本地 dist/
 scripts/install.sh /path/to/webdir     # 也可用 TRANSMISSION_WEB_HOME
-scripts/install.sh --dist /path/to/dist   # 安装任意位置的构建产物（默认取 ./dist）
+scripts/install.sh --dist /path/to/dist   # 安装任意指定位置的构建产物
 scripts/install.sh --restore           # 恢复官方界面
 ```
 
-- web 目录检测已处理 4.0+ 的 `public_html` 布局（发行版路径、群晖、进程表推导）；传入父目录会自动归一化。
-- 版本检测优先读取本地二进制（`transmission-daemon -V`），回退到 RPC 探测（`--rpc-url` / `--rpc-auth`）。低于 4.1 时脚本拒绝安装。
-- 官方 UI 不会被删除：其 `index.html` 被改名为 `index.original.html` 保留在同目录，新 UI 的"关于"窗口中提供了跳转链接；`--restore` 可还原。
+### 脚本特性
+
+- **精确识别 4.0+ web 目录**：自动处理 4.0 起由 `web` 变为 `public_html` 的改动（支持主流 Linux 发行版路径、群晖 DSM、进程表推导）；传入父目录会自动归一化。
+- **4.1+ 版本硬检测**：优先通过本地二进制检测（`transmission-daemon -V`），回退到 RPC 探测（`--rpc-url` / `--rpc-auth`）。低于 4.1 或无法检测时明确拒绝安装。
+- **安全备份与无损还原**：官方 UI 绝不删除，原入口文件保留为 `index.original.html`（新界面的"关于"对话框提供了直接跳转链接）；使用 `--restore` 可随时一键还原官方界面。
 
 ## 开发与维护说明
 

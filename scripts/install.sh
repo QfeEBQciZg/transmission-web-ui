@@ -6,6 +6,8 @@
 #   - the Transmission 4.0+ web dir rename handled precisely (web -> public_html)
 #   - a HARD version gate: installs only on Transmission >= 4.1 (RPC >= 6.0.0)
 #   - the stock UI preserved, never deleted: index.html -> index.original.html
+#   - installs from local build or pre-built GitHub Release asset
+#   - pipe-friendly (curl ... | bash) with /dev/tty interactive prompt fallback
 #
 # Install modes (first match wins):
 #   1. explicit target dir:  ./install.sh /usr/share/transmission/public_html
@@ -14,34 +16,74 @@
 #   3. auto-detection (distro paths, Synology, process table)
 #
 # Source of the build (first match wins):
-#   1. --dist <dir>           (default: ../dist relative to this script)
-#   2. --url <tarball>        (or --repo owner/name → latest release asset)
+#   1. --dist <dir>           explicit local build directory
+#   2. local dist/            (../dist relative to this script, if exists)
+#   3. GitHub Release         download from GitHub (default: QfeEBQciZg/transmission-web-ui)
 #
-# Other flags:
-#   --restore                 restore the stock UI (index.original.html -> index.html)
-#   --rpc-url URL             RPC endpoint for the version check fallback
-#   --rpc-auth user:pass      credentials for the RPC fallback
-#   -y, --yes                 skip the confirmation prompt
-#   -h, --help                show this text
 
 set -euo pipefail
 
 MIN_TR_VERSION="4.1.0"
 MIN_RPC_SEMVER="6.0.0"
 
+DEFAULT_REPO="QfeEBQciZg/transmission-web-ui"
+
 TARGET_DIR=""
 DIST_DIR=""
 DOWNLOAD_URL=""
-GITHUB_REPO="${GITHUB_REPO:-}"
+GITHUB_REPO="${GITHUB_REPO:-$DEFAULT_REPO}"
+RELEASE_VERSION="${RELEASE_VERSION:-}"
+FORCE_RELEASE=0
+GH_PROXY="${GH_PROXY:-}"
 AUTO_YES=0
 DO_RESTORE=0
 RPC_URL="${RPC_URL:-http://127.0.0.1:9091/transmission/rpc}"
 RPC_AUTH="${RPC_AUTH:-}"
+TMP_DIR=""
 
 log() { printf '%s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
-usage() { sed -n '2,29p' "$0"; }
+cleanup() {
+  if [ -n "$TMP_DIR" ] && [ -d "$TMP_DIR" ]; then
+    rm -rf "$TMP_DIR"
+  fi
+}
+trap cleanup EXIT INT TERM
+
+usage() {
+  cat <<'EOF'
+install.sh — install transmission-web-ui into a Transmission 4.1+ web directory.
+
+Usage:
+  install.sh [options] [TARGET_DIR]
+
+Install modes (first match wins):
+  1. explicit target dir:  ./install.sh /usr/share/transmission/public_html
+     (a parent dir containing public_html/ or web/ is also accepted)
+  2. $TRANSMISSION_WEB_HOME
+  3. auto-detection (distro paths, Synology, process table)
+
+Source of the build (first match wins):
+  1. --dist <dir>           explicit local build directory
+  2. local dist/            (../dist relative to this script, if exists)
+  3. GitHub Release         download pre-built tarball from GitHub
+
+Options:
+  --version, -v <tag>       specify release version to download (e.g. v0.1.0, default: latest)
+  --release                 force downloading release even if local dist/ exists
+  --repo <owner/repo>       custom GitHub repository (default: QfeEBQciZg/transmission-web-ui)
+  --url <url>               direct download URL for release tarball or zip
+  --mirror, --proxy <url>   mirror/proxy prefix for GitHub downloads (e.g. https://ghfast.top/)
+  --dist <dir>              install from a local build directory
+  --target <dir>            explicit target web directory
+  --restore                 restore the stock UI (index.original.html -> index.html)
+  --rpc-url <url>           RPC endpoint for version check fallback (default: http://127.0.0.1:9091/transmission/rpc)
+  --rpc-auth <user:pass>    credentials for the RPC fallback
+  -y, --yes                 skip the confirmation prompt
+  -h, --help                show this help message
+EOF
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -163,35 +205,95 @@ resolve_web_dir() {
 
 resolve_source() {
   local script_dir
-  script_dir=$(cd "$(dirname "$0")" && pwd)
+  script_dir=$(cd "$(dirname "$0")" 2>/dev/null && pwd || echo "")
+
   if [ -n "$DIST_DIR" ]; then
     [ -f "$DIST_DIR/index.html" ] || die "dist dir '$DIST_DIR' has no index.html"
     echo "$DIST_DIR"
     return
   fi
-  if [ -f "$script_dir/../dist/index.html" ]; then
-    echo "$script_dir/../dist"
-    return
+
+  # Prefer local build if present, UNLESS --release, --version, or --url was explicitly passed
+  if [ "$FORCE_RELEASE" -eq 0 ] && [ -z "$RELEASE_VERSION" ] && [ -z "$DOWNLOAD_URL" ]; then
+    if [ -n "$script_dir" ] && [ -f "$script_dir/../dist/index.html" ]; then
+      echo "$script_dir/../dist"
+      return
+    fi
   fi
+
   if [ -z "$DOWNLOAD_URL" ]; then
-    [ -n "$GITHUB_REPO" ] ||
-      die "No local dist found (expected $script_dir/../dist). Run 'npm run build' first, or pass --dist/--url/--repo."
-    DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/latest/download/transmission-web-ui-dist.tar.gz"
+    [ -n "$GITHUB_REPO" ] || die "GitHub repo not configured. Pass --repo or --url."
+    local tag="${RELEASE_VERSION:-latest}"
+    if [ "$tag" = "latest" ]; then
+      DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/latest/download/transmission-web-ui-dist.tar.gz"
+    else
+      case "$tag" in
+        v*) ;;
+        *) tag="v$tag" ;;
+      esac
+      DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/$tag/transmission-web-ui-dist.tar.gz"
+    fi
   fi
-  local tmp src
-  tmp=$(mktemp -d /tmp/twui-install.XXXXXX)
+
+  if [ -n "$GH_PROXY" ]; then
+    case "$GH_PROXY" in
+      */) ;;
+      *) GH_PROXY="$GH_PROXY/" ;;
+    esac
+    DOWNLOAD_URL="${GH_PROXY}${DOWNLOAD_URL}"
+  fi
+
+  TMP_DIR=$(mktemp -d /tmp/twui-install.XXXXXX)
   log "Downloading $DOWNLOAD_URL ..."
+  local archive="$TMP_DIR/dist.archive"
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$DOWNLOAD_URL" -o "$tmp/dist.tar.gz" || die "Download failed."
+    curl -fsSL "$DOWNLOAD_URL" -o "$archive" || die "Download failed from $DOWNLOAD_URL"
   elif command -v wget >/dev/null 2>&1; then
-    wget -q "$DOWNLOAD_URL" -O "$tmp/dist.tar.gz" || die "Download failed."
+    wget -q "$DOWNLOAD_URL" -O "$archive" || die "Download failed from $DOWNLOAD_URL"
   else
     die "Neither curl nor wget is available."
   fi
-  tar -xzf "$tmp/dist.tar.gz" -C "$tmp" || die "Extract failed."
-  src=$(find "$tmp" -maxdepth 3 -name index.html | head -n 1)
+
+  # Extract tar.gz or zip
+  if tar -tzf "$archive" >/dev/null 2>&1; then
+    tar -xzf "$archive" -C "$TMP_DIR" || die "Extract failed."
+  elif command -v unzip >/dev/null 2>&1; then
+    unzip -q -o "$archive" -d "$TMP_DIR" || die "Unzip failed."
+  else
+    tar -xf "$archive" -C "$TMP_DIR" || die "Archive extraction failed."
+  fi
+
+  local src
+  src=$(find "$TMP_DIR" -maxdepth 3 -name index.html | head -n 1)
   [ -n "$src" ] || die "Downloaded package has no index.html"
   dirname "$src"
+}
+
+# ---------------------------------------------------------------------------
+# UI version detection
+# ---------------------------------------------------------------------------
+
+# Detect installed or incoming UI version (e.g. 0.1.0). Returns empty if not this UI.
+get_ui_version() {
+  local dir="$1"
+  if [ -f "$dir/version.json" ]; then
+    local v
+    v=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$dir/version.json" | head -n 1)
+    if [ -n "$v" ]; then echo "$v"; return; fi
+  fi
+  if [ -f "$dir/index.html" ]; then
+    local v
+    v=$(sed -n 's/.*<meta[[:space:]][^>]*name=["'\'']version["'\''][^>]*content=["'\'']\([^"'\'']*\)["'\''][^>]*>.*/\1/p' "$dir/index.html" | head -n 1)
+    if [ -n "$v" ]; then echo "$v"; return; fi
+    v=$(sed -n 's/.*<meta[[:space:]][^>]*content=["'\'']\([^"'\'']*\)["'\''][^>]*name=["'\'']version["'\''][^>]*>.*/\1/p' "$dir/index.html" | head -n 1)
+    if [ -n "$v" ]; then echo "$v"; return; fi
+    # Fallback for earlier builds of this UI (such as initial v0.1.0 release without meta tag)
+    if grep -q "Transmission Web UI" "$dir/index.html" 2>/dev/null; then
+      echo "0.1.0"
+      return
+    fi
+  fi
+  echo ""
 }
 
 # ---------------------------------------------------------------------------
@@ -222,14 +324,13 @@ maybe_chown() {
 
 do_install() {
   local src="$1"
+  local installed_ver="${2:-}"
+  local incoming_ver="${3:-}"
   mkdir -p "$TARGET_DIR"
 
   # Preserve the stock UI — never overwrite its entry page or favicon.
-  local already_installed=0
-  if [ -f "$TARGET_DIR/index.html" ] && grep -q "Transmission Web UI" "$TARGET_DIR/index.html" 2>/dev/null; then
-    already_installed=1
-  fi
-  if [ "$already_installed" -eq 0 ]; then
+  # Only back up on fresh installs (when this WebUI was not already installed).
+  if [ -z "$installed_ver" ]; then
     if [ -f "$TARGET_DIR/index.html" ] && [ ! -f "$TARGET_DIR/index.original.html" ]; then
       log "Preserving stock UI as index.original.html"
       mv "$TARGET_DIR/index.html" "$TARGET_DIR/index.original.html"
@@ -239,15 +340,26 @@ do_install() {
     fi
   fi
 
-  log "Installing into $TARGET_DIR ..."
+  if [ -n "$installed_ver" ] && [ "$installed_ver" != "$incoming_ver" ]; then
+    log "Upgrading from v$installed_ver to v$incoming_ver in $TARGET_DIR ..."
+  elif [ -n "$installed_ver" ]; then
+    log "Reinstalling v$installed_ver in $TARGET_DIR ..."
+  else
+    log "Installing into $TARGET_DIR ..."
+  fi
+
   cp -R "$src/." "$TARGET_DIR/"
   chmod -R a+rX "$TARGET_DIR" 2>/dev/null || true
   maybe_chown
 
   log ""
-  log "Done. transmission-web-ui is now served from $TARGET_DIR"
+  if [ -n "$installed_ver" ] && [ "$installed_ver" != "$incoming_ver" ]; then
+    log "Done. transmission-web-ui upgraded to v$incoming_ver in $TARGET_DIR"
+  else
+    log "Done. transmission-web-ui${incoming_ver:+ v$incoming_ver} is now served from $TARGET_DIR"
+  fi
   if [ -f "$TARGET_DIR/index.original.html" ]; then
-    log "The stock UI was preserved as index.original.html (a jump button appears in the new UI's header)."
+    log "The stock UI was preserved as index.original.html (a jump button appears in the About dialog)."
     log "Restore it any time with: $0 --restore $TARGET_DIR"
   fi
 }
@@ -273,6 +385,9 @@ while [ $# -gt 0 ]; do
     --target) shift; TARGET_DIR="${1:?--target needs a value}" ;;
     --url) shift; DOWNLOAD_URL="${1:?--url needs a value}" ;;
     --repo) shift; GITHUB_REPO="${1:?--repo needs a value}" ;;
+    --version | -v) shift; RELEASE_VERSION="${1:?--version needs a value}" ;;
+    --release) FORCE_RELEASE=1 ;;
+    --mirror | --proxy) shift; GH_PROXY="${1:?--mirror needs a value}" ;;
     --rpc-url) shift; RPC_URL="${1:?--rpc-url needs a value}" ;;
     --rpc-auth) shift; RPC_AUTH="${1:?--rpc-auth needs a value}" ;;
     -y | --yes) AUTO_YES=1 ;;
@@ -297,13 +412,41 @@ fi
 enforce_version_gate
 SRC=$(resolve_source)
 
+INSTALLED_UI_VER=$(get_ui_version "$TARGET_DIR")
+INCOMING_UI_VER=$(get_ui_version "$SRC")
+
+if [ -n "$INSTALLED_UI_VER" ]; then
+  log "Detected installed transmission-web-ui: v$INSTALLED_UI_VER"
+fi
+if [ -n "$INCOMING_UI_VER" ]; then
+  log "Package version to install: v$INCOMING_UI_VER"
+fi
+
 if [ "$AUTO_YES" -ne 1 ]; then
-  printf 'Install transmission-web-ui into %s ? [y/N] ' "$TARGET_DIR" >&2
-  read -r ans
+  prompt_msg="Install transmission-web-ui${INCOMING_UI_VER:+ v$INCOMING_UI_VER} into $TARGET_DIR ? [y/N] "
+  if [ -n "$INSTALLED_UI_VER" ]; then
+    if [ "$INSTALLED_UI_VER" = "$INCOMING_UI_VER" ]; then
+      prompt_msg="transmission-web-ui v$INSTALLED_UI_VER is already installed. Reinstall into $TARGET_DIR ? [y/N] "
+    else
+      prompt_msg="Upgrade transmission-web-ui (v$INSTALLED_UI_VER -> v$INCOMING_UI_VER) in $TARGET_DIR ? [y/N] "
+    fi
+  fi
+
+  if [ ! -t 0 ]; then
+    if [ -r /dev/tty ]; then
+      printf '%s' "$prompt_msg" >&2
+      read -r ans < /dev/tty
+    else
+      die "Non-interactive environment detected. Run with -y / --yes to install without confirmation."
+    fi
+  else
+    printf '%s' "$prompt_msg" >&2
+    read -r ans
+  fi
   case "$ans" in
     y | Y | yes | YES) ;;
     *) log "Aborted."; exit 1 ;;
   esac
 fi
 
-do_install "$SRC"
+do_install "$SRC" "$INSTALLED_UI_VER" "$INCOMING_UI_VER"
