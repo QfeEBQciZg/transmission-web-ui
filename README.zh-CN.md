@@ -38,12 +38,6 @@ scripts/install.sh --dist /path/to/dist   # 安装任意指定位置的构建产
 scripts/install.sh --restore           # 恢复官方界面
 ```
 
-### 脚本特性
-
-- **精确识别 4.0+ web 目录**：自动处理 4.0 起由 `web` 变为 `public_html` 的改动（支持主流 Linux 发行版路径、群晖 DSM、进程表推导）；传入父目录会自动归一化。
-- **4.1+ 版本硬检测**：优先通过本地二进制检测（`transmission-daemon -V`），回退到 RPC 探测（`--rpc-url` / `--rpc-auth`）。低于 4.1 或无法检测时明确拒绝安装。
-- **安全备份与无损还原**：官方 UI 绝不删除，原入口文件保留为 `index.original.html`（新界面的"关于"对话框提供了直接跳转链接）；使用 `--restore` 可随时一键还原官方界面。
-
 ## 开发与维护说明
 
 本项目使用 AI 辅助编写与维护，全程由人工进行设计指导与代码审查。

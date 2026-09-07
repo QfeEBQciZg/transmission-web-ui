@@ -38,12 +38,6 @@ scripts/install.sh --dist /path/to/dist   # install a build from any directory
 scripts/install.sh --restore           # restore the stock UI
 ```
 
-### Script Highlights
-
-- **Web dir detection**: Automatically handles the Transmission 4.0+ `public_html` layout (standard Linux distro paths, Synology DSM, daemon process table); passing a parent directory will be normalized automatically.
-- **Hard version gate**: Enforces Transmission ≥ 4.1 via local binary (`transmission-daemon -V`), falling back to the RPC endpoint (`--rpc-url` / `--rpc-auth`). Below 4.1 the script refuses to install.
-- **Safe rollback**: The stock UI is never deleted; its entry file is preserved as `index.original.html` (accessible directly via the About dialog). Run with `--restore` to revert at any time.
-
 ## Development & Maintenance
 
 This project is written and maintained with the assistance of AI, under human direction and code review.
