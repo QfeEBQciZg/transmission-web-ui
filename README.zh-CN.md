@@ -4,6 +4,8 @@
 
 为 **Transmission 4.1+** 打造的现代 WebUI，可替代默认控制界面。
 
+![Transmission Web UI](.github/assets/screenshot.png)
+
 ## 要求
 
 - **Transmission ≥ 4.1**（`rpc_version_semver ≥ 6.0.0`）。启动时会检测，低于 4.1 会在界面顶部告警。**不支持旧版 Transmission（含 4.0.x），不兼容经典 RPC 协议**。

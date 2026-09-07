@@ -4,6 +4,8 @@
 
 A modern web UI for **Transmission 4.1+**, designed as a replacement for the default web interface.
 
+![Transmission Web UI](.github/assets/screenshot.png)
+
 ## Requirements
 
 - **Transmission ≥ 4.1** (`rpc_version_semver ≥ 6.0.0`). The version is checked on startup; older daemons trigger a banner warning. **Older Transmission versions (incl. 4.0.x) and the classic RPC protocol are not supported.**
